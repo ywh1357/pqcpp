@@ -46,9 +46,3 @@ target_link_libraries(pqcpp INTERFACE
     fmt::fmt
     nlohmann_json::nlohmann_json
 )
-
-# add_executable(pqcpp_test 
-#     "test/main.cpp"
-# )
-# target_include_directories(pqcpp_test PRIVATE ${PROJECT_SOURCE_DIR}/include)
-# target_link_libraries(pqcpp_test pqcpp)
