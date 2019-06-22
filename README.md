@@ -75,7 +75,7 @@ int main() {
 }
 ```
 ## 安装  
-`vcpkg install nlohmann-json fmt boost-asio spdlog`
+`vcpkg install libpq nlohmann-json fmt boost-asio spdlog`
 
 `git submodule add https://github.com/ywh1357/pqcpp.git`
 
