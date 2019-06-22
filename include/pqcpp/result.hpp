@@ -38,7 +38,7 @@ namespace pqcpp {
 			return PQresultErrorMessage(m_res);
 		}
 
-		bool is_succeed() const {
+		bool success() const {
 			switch(this->status()){
 			case PGRES_COMMAND_OK:
 			case PGRES_TUPLES_OK:
