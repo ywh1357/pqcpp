@@ -74,3 +74,19 @@ int main() {
     return 0;
 }
 ```
+## 安装  
+`vcpkg install nlohmann-json fmt boost-asio spdlog`
+
+`git submodule add https://github.com/ywh1357/pqcpp.git`
+
+### CMAKE:  
+```cmake
+if(MSVC)
+    add_compile_options(-await -utf-8)
+endif(MSVC)
+
+add_subdirectory(pqcpp)
+
+add_executable(pqcpp_test "src/main.cpp")
+target_link_libraries(pqcpp_test pqcpp)
+```
