@@ -148,6 +148,22 @@ namespace pqcpp {
 			);
 		}
 
+		template <typename R>
+		awaitable<R> transaction(awaitable<R> a) {
+			std::exception_ptr ex;
+			try {
+				co_await this->async_start_transaction(use_awaitable);
+				auto r = co_await a;
+			}
+			catch (...) {
+				ex = std::current_exception();
+			}
+			co_await this->async_end_transaction(use_awaitable);
+			if (ex) {
+				std::rethrow_exception(ex);
+			}
+		}
+
 		template <typename CompletionToken>
 		auto async_start_transaction(CompletionToken&& token) {
 			auto q = std::make_shared<query>("BEGIN;");
