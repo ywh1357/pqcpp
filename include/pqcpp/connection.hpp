@@ -4,6 +4,7 @@
 #include <iostream>
 #include <limits>
 #include <atomic>
+#include <optional>
 #include <boost/asio.hpp>
 #include <libpq-fe.h>
 #include <fmt/format.h>
@@ -17,6 +18,7 @@
 #include <pqcpp/detail/connect_op.hpp>
 #include <pqcpp/detail/query_op.hpp>
 #include <pqcpp/coro.hpp>
+#include <pqcpp/detail/concept.hpp>
 
 namespace pqcpp {
 
@@ -148,12 +150,18 @@ namespace pqcpp {
 			);
 		}
 
-		template <typename R>
-		awaitable<R> transaction(awaitable<R> a) {
+		template <
+			typename F,
+			std::enable_if_t<
+				concept::is_void_coroutine_function_v<F>,
+				int
+			> = 1
+		>
+		auto transaction(F && f) -> std::invoke_result_t<F> {
 			std::exception_ptr ex;
 			try {
 				co_await this->async_start_transaction(use_awaitable);
-				auto r = co_await a;
+				co_await f();
 			}
 			catch (...) {
 				ex = std::current_exception();
@@ -162,17 +170,48 @@ namespace pqcpp {
 			if (ex) {
 				std::rethrow_exception(ex);
 			}
+			else {
+				co_return;
+			}
+		}
+
+		template <
+			typename F,
+			std::enable_if_t<
+				concept::is_non_void_coroutine_function_v<F>,
+				int
+			> = 1
+		>
+		auto transaction(F&& f) -> std::invoke_result_t<F> {
+			std::exception_ptr ex;
+			std::optional<concept::coroutine_function_result_t<F>> r;
+			try {
+				co_await this->async_start_transaction(use_awaitable);
+				r = co_await f();
+			}
+			catch (...) {
+				ex = std::current_exception();
+			}
+			co_await this->async_end_transaction(use_awaitable);
+			if (ex) {
+				std::rethrow_exception(ex);
+			}
+			else {
+				co_return *r;
+			}
 		}
 
 		template <typename CompletionToken>
 		auto async_start_transaction(CompletionToken&& token) {
 			auto q = std::make_shared<query>("BEGIN;");
+			logger()->trace("conn {} start transaction", this->id());
 			return async_query(q, token);
 		}
 
 		template <typename CompletionToken>
 		auto async_end_transaction(CompletionToken&& token) {
 			auto q = std::make_shared<query>("END;");
+			logger()->trace("conn {} end transaction", this->id());
 			return async_query(q, token);
 		}
 
