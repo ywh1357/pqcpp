@@ -19,7 +19,7 @@ namespace pqcpp {
 
     struct connection_pool_option {
         int min_size = 3;
-        int max_size = -1;
+        int max_size = 10;
     };
 
     class connection_pool: public std::enable_shared_from_this<connection_pool> {
@@ -58,7 +58,7 @@ namespace pqcpp {
         using conn_ptr = std::shared_ptr<connection>;
         using get_handler = std::function<void(error_code, conn_ptr)>;
 
-        static std::shared_ptr<connection_pool> make(boost::asio::io_context& io, const std::string &conn_str, int min = 3, int max = -1) {
+        static std::shared_ptr<connection_pool> make(boost::asio::io_context& io, const std::string &conn_str, int min = 3, int max = 10) {
             std::shared_ptr<connection_pool> pool(new connection_pool(io, conn_str, min, max));
             pool->init();
             return pool;
@@ -88,7 +88,7 @@ namespace pqcpp {
 						else {
 							this->enqueue_get_handler(std::move(handler));
 							if (
-								(m_filling && m_pendings.size() <= (m_max - m_min))
+								(m_filling && m_pendings.size() <= static_cast<size_t>(m_max - m_min))
 								|| m_conn_count < m_max
 							) {
 								co_spawn(m_strand,[this, self = shared_from_this()]() {
@@ -125,7 +125,9 @@ namespace pqcpp {
 						co_await m_fill_timer.async_wait(redirect_error(use_awaitable, ec));
 						continue;
 					}
-					catch (...) {}
+					catch (const std::exception& ex) {
+						logger()->error("fill connection error: {}", ex.what());
+					}
 					co_await detail::delay(m_strand, std::chrono::seconds(3));
 				}
 			}, detached);
@@ -168,7 +170,7 @@ namespace pqcpp {
 					handler({}, make_conn_ptr(std::move(conn)));
 				}
 				else {
-				   if (m_conns.size() < m_min) {
+				   if (m_conns.size() < static_cast<size_t>(m_min)) {
 					   m_conns.insert(std::make_pair(conn->id(), std::move(conn)));
 				   }
 				   else {
@@ -208,6 +210,7 @@ namespace pqcpp {
 			else {
 				++m_conn_count;
 			}
+			logger()->trace("start create connection");
 			try {
 				conn_ptr_inner conn(
 					new connection(m_conn_str, m_io)
@@ -229,7 +232,7 @@ namespace pqcpp {
 
     private:
         std::string m_conn_str;
-		std::size_t m_conn_count{ 0 };
+		int m_conn_count{ 0 };
         std::map<size_t, conn_ptr_inner> m_conns;
         std::queue<get_handler> m_pendings;
         boost::asio::io_context& m_io;

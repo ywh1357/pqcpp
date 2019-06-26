@@ -91,7 +91,8 @@ namespace detail {
                 if(ec == boost::asio::error::operation_aborted){
                     return;
                 }
-                m_conn.get_socket().cancel();
+				error_code ignore_ec;
+                m_conn.get_socket().cancel(ignore_ec);
 				logger()->error("connection {} write error {}: {}", m_conn.id(), ec.value(), ec.message());
 				this->on_query_failure(self, ec);
 				return;
@@ -124,7 +125,8 @@ namespace detail {
                 if(ec == boost::asio::error::operation_aborted){
                     return;
                 }
-                m_conn.get_socket().cancel();
+				error_code ignore_ec;
+                m_conn.get_socket().cancel(ignore_ec);
 				logger()->error("connection {} read error {}: {}", m_conn.id(), ec.value(), ec.message());
 				on_query_failure(self, ec);
 				return;
