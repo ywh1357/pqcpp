@@ -12,7 +12,7 @@ enum level {
 	READ_UNCOMMITTED
 };
 
-std::string_view to_string(level l){
+inline std::string_view to_string(level l){
 	switch (l)
 	{
 	case pqcpp::transaction::SERIALIZABLE:
