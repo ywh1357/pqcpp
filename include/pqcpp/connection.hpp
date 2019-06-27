@@ -15,6 +15,7 @@
 #include <pqcpp/result.hpp>
 #include <pqcpp/connection_option.hpp>
 #include <pqcpp/error.hpp>
+#include <pqcpp/transaction.hpp>
 #include <pqcpp/detail/connect_op.hpp>
 #include <pqcpp/detail/query_op.hpp>
 #include <pqcpp/coro.hpp>
@@ -150,17 +151,27 @@ namespace pqcpp {
 			);
 		}
 
+		template <typename ...Args>
+		awaitable<std::vector<std::shared_ptr<result>>>
+		async_query(const std::string& cmd, Args&& ...args) {
+			auto q = std::make_shared<query>(cmd);
+			if constexpr (sizeof...(Args) > 0) {
+				q->set_parameters(std::forward<Args>(args)...);
+			}
+			return this->async_query(q, use_awaitable);
+		}
+
 		template <
 			typename F,
 			std::enable_if_t<
-				concept::is_void_coroutine_function_v<F>,
-				int
+			concept::is_void_coroutine_function_v<F>,
+			int
 			> = 1
 		>
-		auto transaction(F && f) -> std::invoke_result_t<F> {
+		auto transaction(transaction::level level, F && f) -> std::invoke_result_t<F> {
 			std::exception_ptr ex;
 			try {
-				co_await this->async_start_transaction(use_awaitable);
+				co_await this->async_start_transaction(level, use_awaitable);
 				co_await f();
 			}
 			catch (...) {
@@ -178,15 +189,15 @@ namespace pqcpp {
 		template <
 			typename F,
 			std::enable_if_t<
-				concept::is_non_void_coroutine_function_v<F>,
-				int
+			concept::is_non_void_coroutine_function_v<F>,
+			int
 			> = 1
 		>
-		auto transaction(F&& f) -> std::invoke_result_t<F> {
+		auto transaction(transaction::level level, F && f) -> std::invoke_result_t<F> {
 			std::exception_ptr ex;
 			std::optional<concept::coroutine_function_result_t<F>> r;
 			try {
-				co_await this->async_start_transaction(use_awaitable);
+				co_await this->async_start_transaction(level, use_awaitable);
 				r = co_await f();
 			}
 			catch (...) {
@@ -201,11 +212,39 @@ namespace pqcpp {
 			}
 		}
 
+		template <
+			typename F,
+			std::enable_if_t<
+				concept::is_void_coroutine_function_v<F>,
+				int
+			> = 1
+		>
+		auto transaction(F && f) -> std::invoke_result_t<F> {
+			return this->transaction(transaction::SERIALIZABLE, std::forward<F>(f));
+		}
+
+		template <
+			typename F,
+			std::enable_if_t<
+				concept::is_non_void_coroutine_function_v<F>,
+				int
+			> = 1
+		>
+		auto transaction(F&& f) -> std::invoke_result_t<F> {
+			return this->transaction(transaction::SERIALIZABLE, std::forward<F>(f));
+		}
+
 		template <typename CompletionToken>
-		auto async_start_transaction(CompletionToken&& token) {
-			auto q = std::make_shared<query>("BEGIN;");
+		auto async_start_transaction(transaction::level level, CompletionToken&& token) {
+			auto q = std::make_shared<query>(
+				fmt::format("BEGIN TRANSACTION ISOLATION LEVEL {};", transaction::to_string(level)));
 			logger()->trace("conn {} start transaction", this->id());
 			return async_query(q, token);
+		}
+
+		template <typename CompletionToken>
+		auto async_start_transaction(CompletionToken&& token) {
+			return async_start_transaction(transaction::SERIALIZABLE, token);
 		}
 
 		template <typename CompletionToken>
