@@ -35,16 +35,24 @@ namespace detail {
 		}
 
         bool send_query(const query& q) {
-			return PQsendQueryParams(
-				m_conn.get_native_conn(),
-				q.command(),
-				q.params_size(),
-				nullptr,
-				q.params_values(),
-				q.params_lengths(),
-				q.params_formats(),
-				0
-			) == 1;
+			if (q.m_params_values.size() == 0) {
+				return PQsendQuery(
+					m_conn.get_native_conn(),
+					q.command()
+				) == 1;
+			}
+			else {
+				return PQsendQueryParams(
+					m_conn.get_native_conn(),
+					q.command(),
+					q.params_size(),
+					nullptr,
+					q.params_values(),
+					q.params_lengths(),
+					q.params_formats(),
+					0
+				) == 1;
+			}
 		}
 
 		template <typename Self>

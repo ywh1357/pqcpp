@@ -98,12 +98,17 @@ public:
 private:
 	void ensure_success(const std::vector<result_ptr>& results) {
 		if (!results.empty()) {
-			auto result = results.front();
-			if (result->success()) {
+			auto all_success = std::all_of(results.begin(), results.end(), [](result_ptr result) {
+				if (result->success()) {
+					return true;
+				}
+				else {
+					logger()->error("{}", result->error_message());
+					return false;
+				}
+			});
+			if (all_success) {
 				return;
-			}
-			else {
-				logger()->error("{}", result->error_message());
 			}
 		}
 		throw error::make_error_code(error::pqcpp_ec::QUERY_FAILED);
