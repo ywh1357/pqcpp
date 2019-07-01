@@ -9,7 +9,7 @@
 namespace pqcpp {
 
 namespace detail {
-std::string_view create_migrations_table_cmd =
+constexpr std::string_view create_migrations_table_cmd =
 R"(CREATE TABLE IF NOT EXISTS migrations(
     id SERIAL PRIMARY KEY,
 	version integer NOT NULL,
