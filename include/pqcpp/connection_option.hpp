@@ -27,8 +27,8 @@ namespace pqcpp {
 		{}
 
 		std::string get_conn_str() const {
-			return fmt::format("host={} dbname={} user={} password={}",
-				this->host, this->db, this->user, this->password);
+			return fmt::format("host={} port={} dbname={} user={} password={}",
+				this->host, this->port, this->db, this->user, this->password);
 		}
 
 		static connection_options from_json(const std::filesystem::path& path) {

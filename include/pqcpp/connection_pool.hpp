@@ -64,6 +64,12 @@ namespace pqcpp {
             return pool;
         }
 
+		static std::shared_ptr<connection_pool> make(boost::asio::io_context& io, const connection_options& opts, int min = 3, int max = 10) {
+			std::shared_ptr<connection_pool> pool(new connection_pool(io, opts, min, max));
+			pool->init();
+			return pool;
+		}
+
         connection_pool(const connection_pool&) = delete;
         connection_pool(connection_pool&&) = delete;
         connection_pool& operator=(const connection_pool&) = delete;
