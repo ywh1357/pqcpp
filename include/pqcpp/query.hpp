@@ -8,12 +8,18 @@
 
 namespace pqcpp {
 
+namespace detail {
+template <typename Conn>
+struct query_op;
+}
 
 	class result;
 
 	class connection;
 
 	class query {
+		template <typename>
+		friend struct detail::query_op;
 	public:
 
 		/**

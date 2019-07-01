@@ -44,6 +44,10 @@ namespace pqcpp {
 			return std::shared_ptr<connection>{ new connection(conn_str, io) };
 		}
 
+		static std::shared_ptr<connection> make(const connection_options& opts, boost::asio::io_context& io) {
+			return std::shared_ptr<connection>{ new connection(opts.get_conn_str(), io) };
+		}
+
 		~connection() {
 			if (m_native_conn) {
 				PQfinish(m_native_conn);
@@ -151,10 +155,10 @@ namespace pqcpp {
 			);
 		}
 
-		template <typename ...Args>
+		template <typename T, typename ...Args>
 		awaitable<std::vector<std::shared_ptr<result>>>
-		async_query(const std::string& cmd, Args&& ...args) {
-			auto q = std::make_shared<query>(cmd);
+		async_query(T&& cmd, Args&& ...args) {
+			auto q = std::make_shared<query>(std::forward<T>(cmd));
 			if constexpr (sizeof...(Args) > 0) {
 				q->set_parameters(std::forward<Args>(args)...);
 			}
@@ -177,11 +181,12 @@ namespace pqcpp {
 			catch (...) {
 				ex = std::current_exception();
 			}
-			co_await this->async_end_transaction(use_awaitable);
 			if (ex) {
+				co_await this->async_rollback_transaction(use_awaitable);
 				std::rethrow_exception(ex);
 			}
 			else {
+				co_await this->async_end_transaction(use_awaitable);
 				co_return;
 			}
 		}
@@ -203,11 +208,13 @@ namespace pqcpp {
 			catch (...) {
 				ex = std::current_exception();
 			}
-			co_await this->async_end_transaction(use_awaitable);
+			
 			if (ex) {
+				co_await this->async_rollback_transaction(use_awaitable);
 				std::rethrow_exception(ex);
 			}
 			else {
+				co_await this->async_end_transaction(use_awaitable);
 				co_return *r;
 			}
 		}
@@ -251,6 +258,13 @@ namespace pqcpp {
 		auto async_end_transaction(CompletionToken&& token) {
 			auto q = std::make_shared<query>("END;");
 			logger()->trace("conn {} end transaction", this->id());
+			return async_query(q, token);
+		}
+
+		template <typename CompletionToken>
+		auto async_rollback_transaction(CompletionToken&& token) {
+			auto q = std::make_shared<query>("ROLLBACK;");
+			logger()->trace("conn {} rollback transaction", this->id());
 			return async_query(q, token);
 		}
 

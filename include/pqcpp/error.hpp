@@ -14,7 +14,8 @@ namespace error {
 		CONN_ALLOCATE_FAILED,
 		CONNECT_FAILED,
 		QUERY_FAILED,
-		NETWORK_ERROR
+		NETWORK_ERROR,
+		INVALID_MIGRATIONS_DIR
     };
 
 	class error_category : public boost::system::error_category

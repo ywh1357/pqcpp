@@ -6,6 +6,8 @@
 #include <boost/asio.hpp>
 #include <pqcpp/logger.hpp>
 #include <pqcpp/query.hpp>
+#include <fmt/ostream.h>
+#include <fmt/ranges.h>
 
 namespace pqcpp {
 namespace detail {
@@ -27,7 +29,10 @@ namespace detail {
 
         query_op(Conn& conn, std::shared_ptr<query> query)
             :m_conn(conn), m_query(query), state_(starting)
-        {}
+        {
+
+			logger()->trace("query: {}\tparameters: {}", query->m_cmd, query->m_params_values);
+		}
 
         bool send_query(const query& q) {
 			return PQsendQueryParams(

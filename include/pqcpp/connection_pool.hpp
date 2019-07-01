@@ -113,6 +113,12 @@ namespace pqcpp {
 			m_fill_timer.expires_at(std::chrono::steady_clock::time_point::max());
 		}
 
+		connection_pool(boost::asio::io_context& io, const connection_options& opts, int min, int max)
+			:m_io(io), m_conn_str(opts.get_conn_str()), m_min(min), m_max(max)
+		{
+			m_fill_timer.expires_at(std::chrono::steady_clock::time_point::max());
+		}
+
 		void start_fill_conns() {
 			co_spawn(m_strand, [this, self = shared_from_this()]() -> awaitable<void> {
 				while (true) {
