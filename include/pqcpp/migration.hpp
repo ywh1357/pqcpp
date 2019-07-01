@@ -12,13 +12,13 @@ namespace detail {
 std::string_view create_migrations_table_cmd =
 R"(CREATE TABLE IF NOT EXISTS migrations(
     id SERIAL PRIMARY KEY,
-	version text NOT NULL,
+	version integer NOT NULL,
 	"timestamp" bigint NOT NULL DEFAULT extract(EPOCH FROM now()),
 	name text NOT NULL
 );)";
 
 struct migration_record {
-	std::string version;
+	int version;
 	std::string name;
 	std::filesystem::path file;
 };
@@ -27,8 +27,9 @@ inline migration_record create_migration_record(const std::filesystem::path& pat
 	auto filename = path.filename().string();
 	auto delimiter_pos = filename.find("-");
 	auto dot_pos = filename.rfind(".");
+	auto version_str = filename.substr(0, delimiter_pos);
 	migration_record r = {
-		filename.substr(0, delimiter_pos),
+		std::stoi(version_str),
 		filename.substr(delimiter_pos + 1, dot_pos - delimiter_pos - 1),
 		path
 	};
@@ -62,8 +63,8 @@ public:
 
 	}
 
-	awaitable<void> run(const connection_options& opts) {
-		auto conn = connection::make(opts, m_io);
+	awaitable<void> run() {
+		auto conn = connection::make(m_opts, m_io);
 		co_await conn->async_connect(use_awaitable);
 		auto create_results = co_await conn->async_query(detail::create_migrations_table_cmd);
 		ensure_success(create_results);
@@ -73,7 +74,7 @@ public:
 			auto check_result = results.front();
 			auto begin = m_migrations.begin();
 			if (check_result->row_count() > 0) {
-				auto version = (*check_result->begin()).get<std::string>("version");
+				auto version = (*check_result->begin()).get<int>("version");
 				begin = m_migrations.upper_bound(version);
 			}
 			while (begin != m_migrations.end())
@@ -84,7 +85,7 @@ public:
 				auto migrate_results = co_await conn->async_query(cmd);
 				ensure_success(migrate_results);
 				auto save_migration_results = co_await conn->async_query(
-					"INSERT INTO public.migrations(version, name) VALUES($1::text, $2::text);",
+					"INSERT INTO public.migrations(version, name) VALUES($1::integer, $2::text);",
 					r.version, r.name
 				);
 				ensure_success(save_migration_results);
@@ -119,7 +120,7 @@ private:
 	boost::asio::io_context& m_io;
 	connection_options m_opts;
 	std::string m_migrations_dir;
-	std::map<std::string, detail::migration_record> m_migrations;
+	std::map<int, detail::migration_record> m_migrations;
 };
 
 } // namespace pqcpp
