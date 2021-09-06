@@ -248,7 +248,7 @@ namespace pqcpp {
         std::map<size_t, conn_ptr_inner> m_conns;
         std::queue<get_handler> m_pendings;
         boost::asio::io_context& m_io;
-		boost::asio::io_context::strand m_strand{ m_io };
+		boost::asio::strand<boost::asio::io_context::executor_type> m_strand{ m_io.get_executor() };
 		boost::asio::steady_timer m_fill_timer{ m_strand };
         int m_min;
         int m_max;

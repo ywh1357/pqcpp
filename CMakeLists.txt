@@ -46,3 +46,10 @@ target_link_libraries(pqcpp INTERFACE
     fmt::fmt
     nlohmann_json::nlohmann_json
 )
+
+if (MSVC)
+    find_package(PostgreSQL REQUIRED)
+    target_link_libraries(pqcpp INTERFACE
+        PostgreSQL::PostgreSQL
+    )
+endif()

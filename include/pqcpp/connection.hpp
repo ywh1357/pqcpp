@@ -28,7 +28,7 @@ namespace pqcpp {
 		using error_code = boost::system::error_code;
 	public:
 		using socket_type = boost::asio::ip::tcp::socket;
-		using strand_type = boost::asio::io_context::strand;
+		using strand_type = boost::asio::strand<boost::asio::io_context::executor_type>;
 
 		using response_success_handle = std::function<void(const std::vector<std::shared_ptr<pqcpp::result>>&)>;
 		using response_failure_handle = std::function<void(const std::string&)>;
@@ -285,7 +285,7 @@ namespace pqcpp {
 
 	private:
 		connection(const std::string& conn_str, boost::asio::io_context& io)
-			:m_conn_str(conn_str), m_io(io), m_strand(io)
+			:m_conn_str(conn_str), m_io(io), m_strand(io.get_executor())
 		{
 			++total_;
 			logger()->trace("connection {} created, total {}", m_id, total_);
@@ -296,7 +296,7 @@ namespace pqcpp {
 		const std::size_t m_id = current_id++;
 		std::string m_conn_str;
 		boost::asio::io_context& m_io;
-		boost::asio::io_context::strand m_strand;
+		strand_type m_strand;
 		std::unique_ptr<socket_type> m_socket = nullptr;
 		::pg_conn* m_native_conn = nullptr;
 
