@@ -165,6 +165,33 @@ namespace pqcpp {
 			return this->async_query(q, use_awaitable);
 		}
 
+		template <typename CompletionToken>
+		auto async_start_transaction(transaction::level level, CompletionToken&& token) {
+			auto q = std::make_shared<query>(
+				fmt::format("BEGIN TRANSACTION ISOLATION LEVEL {};", transaction::to_string(level)));
+			logger()->trace("conn {} start transaction", this->id());
+			return async_query(q, token);
+		}
+
+		template <typename CompletionToken>
+		auto async_start_transaction(CompletionToken&& token) {
+			return async_start_transaction(transaction::SERIALIZABLE, token);
+		}
+
+				template <typename CompletionToken>
+		auto async_rollback_transaction(CompletionToken&& token) {
+			auto q = std::make_shared<query>("ROLLBACK;");
+			logger()->trace("conn {} rollback transaction", this->id());
+			return async_query(q, token);
+		}
+
+		template <typename CompletionToken>
+		auto async_end_transaction(CompletionToken&& token) {
+			auto q = std::make_shared<query>("END;");
+			logger()->trace("conn {} end transaction", this->id());
+			return async_query(q, token);
+		}
+
 		template <
 			typename F,
 			std::enable_if_t<
@@ -239,33 +266,6 @@ namespace pqcpp {
 		>
 		auto transaction(F&& f) -> std::invoke_result_t<F> {
 			return this->transaction(transaction::SERIALIZABLE, std::forward<F>(f));
-		}
-
-		template <typename CompletionToken>
-		auto async_start_transaction(transaction::level level, CompletionToken&& token) {
-			auto q = std::make_shared<query>(
-				fmt::format("BEGIN TRANSACTION ISOLATION LEVEL {};", transaction::to_string(level)));
-			logger()->trace("conn {} start transaction", this->id());
-			return async_query(q, token);
-		}
-
-		template <typename CompletionToken>
-		auto async_start_transaction(CompletionToken&& token) {
-			return async_start_transaction(transaction::SERIALIZABLE, token);
-		}
-
-		template <typename CompletionToken>
-		auto async_end_transaction(CompletionToken&& token) {
-			auto q = std::make_shared<query>("END;");
-			logger()->trace("conn {} end transaction", this->id());
-			return async_query(q, token);
-		}
-
-		template <typename CompletionToken>
-		auto async_rollback_transaction(CompletionToken&& token) {
-			auto q = std::make_shared<query>("ROLLBACK;");
-			logger()->trace("conn {} rollback transaction", this->id());
-			return async_query(q, token);
 		}
 
 		/**

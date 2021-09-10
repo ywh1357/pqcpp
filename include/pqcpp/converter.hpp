@@ -106,7 +106,7 @@ namespace pqcpp {
 			if(input){
 				return field_converter<T>::to_field(*input);
 			}else{
-				field f{ nullptr, 0 };
+				field f{ nullptr, 0, field_format::text_format };
 				f.is_null = true;
 				return f;
 			}

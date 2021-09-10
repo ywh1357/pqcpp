@@ -54,6 +54,13 @@ namespace pqcpp {
 		friend struct conn_ptr_deleter;
 
 		using conn_ptr_inner = std::unique_ptr<connection>;
+
+		auto make_conn_ptr(conn_ptr_inner&& conn) {
+			return conn_ptr(
+				conn.release(),
+				conn_ptr_deleter(weak_from_this())
+			);
+		}
     public:
         using conn_ptr = std::shared_ptr<connection>;
         using get_handler = std::function<void(error_code, conn_ptr)>;
@@ -76,7 +83,7 @@ namespace pqcpp {
         connection_pool& operator=(connection_pool&&) = delete;
 
         template <typename CompletionToken>
-        auto get(CompletionToken&& token) {
+        auto get(CompletionToken token) {
 			return boost::asio::async_initiate<
 				CompletionToken,
 				void(boost::system::error_code, conn_ptr)
@@ -162,13 +169,6 @@ namespace pqcpp {
 			};
 			logger()->trace("enqueue_get_handler");
 			this->m_pendings.emplace(completion(std::forward<Handler>(handler)));
-		}
-
-		auto make_conn_ptr(conn_ptr_inner&& conn) {
-			return conn_ptr(
-				conn.release(),
-				conn_ptr_deleter(weak_from_this())
-			);
 		}
 
 		void on_conn_ready(conn_ptr_inner conn) {

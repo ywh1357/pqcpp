@@ -36,7 +36,7 @@ namespace pqcpp {
 	inline std::shared_ptr<spdlog::logger> _global_logger;
 
 	inline std::shared_ptr<spdlog::logger> logger() {
-		std::unique_lock<std::mutex>(_global_logger_mutex);
+		std::unique_lock<std::mutex> lock(_global_logger_mutex);
 		if(!_global_logger){
 			_global_logger = make_default_logger();
 		}

@@ -9,38 +9,25 @@ find_package(fmt CONFIG REQUIRED)
 find_package(Boost COMPONENTS system REQUIRED)
 find_package(spdlog REQUIRED)
 
-SET(CMAKE_FIND_LIBRARY_PREFIXES "")
-SET(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".dll")
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_library(LIBPQ_LIB libpq)
-find_program(LIBPQ_DLL libpq.dll)
-find_path(LIBPQ_INCLUDE libpq-fe.h)
+# SET(CMAKE_FIND_LIBRARY_PREFIXES "")
+# SET(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".dll")
 
-message("LIBPQ_LIB=${LIBPQ_LIB}")
-message("LIBPQ_DLL=${LIBPQ_DLL}")
-message("LIBPQ_INCLUDE=${LIBPQ_INCLUDE}")
-
-if(MSVC)
-    add_compile_options(-await -utf-8)
-    add_compile_definitions(
-        _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
-        _WIN32_WINNT=0x0601
-    )
-endif(MSVC)
-
-add_library(pq SHARED IMPORTED)
-set_target_properties(pq PROPERTIES
-    IMPORTED_LOCATION "${LIBPQ_DLL}"
-	IMPORTED_IMPLIB "${LIBPQ_LIB}"
-	INTERFACE_INCLUDE_DIRECTORIES "${LIBPQ_INCLUDE}"
-)
+find_package(PostgreSQL REQUIRED)
 
 add_library(pqcpp INTERFACE)
 target_include_directories(pqcpp
     INTERFACE ${PROJECT_SOURCE_DIR}/include)
-target_link_libraries(pqcpp INTERFACE 
-    ws2_32
-    pq
+if (LIBPQ_INCLUDE)
+target_include_directories(pqcpp
+    INTERFACE ${LIBPQ_INCLUDE}
+)
+endif()
+
+target_link_libraries(pqcpp INTERFACE
+    PostgreSQL::PostgreSQL
     Boost::system
     spdlog::spdlog
     fmt::fmt
@@ -48,8 +35,5 @@ target_link_libraries(pqcpp INTERFACE
 )
 
 if (MSVC)
-    find_package(PostgreSQL REQUIRED)
-    target_link_libraries(pqcpp INTERFACE
-        PostgreSQL::PostgreSQL
-    )
+    target_link_libraries(pqcpp INTERFACE ws2_32)
 endif()
